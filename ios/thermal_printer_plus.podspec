@@ -32,17 +32,32 @@ A new Flutter plugin project.
   # la slice x86_64 tiene el mismo marcador.
   #
   # Con `vendored_libraries` el `-l"GSDK"` salia incondicional y no habia forma
-  # de sacarlo por SDK, asi que las banderas se escriben a mano condicionadas a
-  # `[sdk=iphoneos*]`. En simulador las tres clases que el plugin instancia las
+  # de sacarlo por SDK. En simulador las tres clases que el plugin instancia las
   # aporta Classes/GSDKSimulatorStubs.m.
+  #
+  # Lo condicional son DOS VARIABLES AUXILIARES, no los ajustes reales, y la
+  # diferencia no es cosmetica: en un xcconfig la asignacion condicional gana
+  # ENTERA sobre la incondicional del mismo ajuste, y `$(inherited)` no trae el
+  # valor de al lado sino el del nivel de abajo. Escribir
+  # `OTHER_LDFLAGS[sdk=iphoneos*] = -l"GSDK"` dejaba al target de la app con esa
+  # unica bandera y borraba las ~200 que CocoaPods genera: el build de
+  # dispositivo moria con `Undefined symbol: _WebPPictureFree` y cien mas, todos
+  # de pods que no tienen nada que ver con la impresora. Por eso OTHER_LDFLAGS y
+  # LIBRARY_SEARCH_PATHS quedan incondicionales -CocoaPods los fusiona con lo
+  # suyo- y lo que cambia por SDK es el contenido de $(GSDK_LDFLAGS) y
+  # $(GSDK_LIB_DIR), vacios en simulador.
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
-    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '"$(PODS_TARGET_SRCROOT)/ios"',
-    'OTHER_LDFLAGS[sdk=iphoneos*]' => '-l"GSDK"',
+    'GSDK_LDFLAGS[sdk=iphoneos*]' => '-l"GSDK"',
+    'GSDK_LIB_DIR[sdk=iphoneos*]' => '"$(PODS_TARGET_SRCROOT)/ios"',
+    'OTHER_LDFLAGS' => '$(GSDK_LDFLAGS)',
+    'LIBRARY_SEARCH_PATHS' => '$(GSDK_LIB_DIR)',
   }
   s.user_target_xcconfig = {
-    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '"$(PODS_ROOT)/../.symlinks/plugins/thermal_printer_plus/ios"',
-    'OTHER_LDFLAGS[sdk=iphoneos*]' => '-l"GSDK"',
+    'GSDK_LDFLAGS[sdk=iphoneos*]' => '-l"GSDK"',
+    'GSDK_LIB_DIR[sdk=iphoneos*]' => '"$(PODS_ROOT)/../.symlinks/plugins/thermal_printer_plus/ios"',
+    'OTHER_LDFLAGS' => '$(GSDK_LDFLAGS)',
+    'LIBRARY_SEARCH_PATHS' => '$(GSDK_LIB_DIR)',
   }
   # s.swift_version = '5.0'
 end
