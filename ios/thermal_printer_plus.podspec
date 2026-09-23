@@ -21,9 +21,28 @@ A new Flutter plugin project.
 
   # Import all * .a libraries in the Classes folder
   s.frameworks = ["SystemConfiguration", "CoreTelephony","WebKit"]
-  s.vendored_libraries = '**/*.a'
 
-  # Flutter.framework does not contain a i386 slice.
-  # s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
+  # libGSDK.a se enlaza SOLO en dispositivo.
+  #
+  # Sus cuatro slices (i386, armv7, x86_64, arm64) llevan LC_VERSION_MIN_IPHONEOS
+  # -el marcador de dispositivo- porque se compilo con un toolchain anterior a
+  # que Apple distinguiera dispositivo de simulador. El enlazador moderno la
+  # rechaza en cualquier build de simulador con "Building for 'iOS-simulator',
+  # but linking in object file ... built for 'iOS'", y Rosetta no salva nada:
+  # la slice x86_64 tiene el mismo marcador.
+  #
+  # Con `vendored_libraries` el `-l"GSDK"` salia incondicional y no habia forma
+  # de sacarlo por SDK, asi que las banderas se escriben a mano condicionadas a
+  # `[sdk=iphoneos*]`. En simulador las tres clases que el plugin instancia las
+  # aporta Classes/GSDKSimulatorStubs.m.
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '"$(PODS_TARGET_SRCROOT)/ios"',
+    'OTHER_LDFLAGS[sdk=iphoneos*]' => '-l"GSDK"',
+  }
+  s.user_target_xcconfig = {
+    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '"$(PODS_ROOT)/../.symlinks/plugins/thermal_printer_plus/ios"',
+    'OTHER_LDFLAGS[sdk=iphoneos*]' => '-l"GSDK"',
+  }
   # s.swift_version = '5.0'
 end
